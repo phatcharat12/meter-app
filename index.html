@@ -9,14 +9,14 @@
     <style>
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 16px;
+            padding: 20px 16px;
             margin: 0;
-            text-align: center;
-            background: #f4f4f9;
+            background: #f8fafc;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -25,68 +25,130 @@
 
         .card {
             background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 28px 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
+            text-align: center;
         }
 
         h2 {
-            margin-top: 0;
-            color: #111827;
+            margin: 0 0 20px 0;
+            color: #0f172a;
             font-size: 22px;
+            font-weight: 700;
         }
 
-        button {
-            background: #4F46E5;
+        .primary-btn {
+            background: #4f46e5;
             color: white;
             border: none;
-            padding: 14px 20px;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 12px;
             width: 100%;
-            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        button:active {
+        .primary-btn:active {
+            transform: scale(0.98);
             opacity: 0.9;
+        }
+
+        .btn-upload {
+            background: #10b981;
+            margin-bottom: 12px;
+        }
+
+        .btn-process {
+            background: #6366f1;
+            margin-top: 12px;
         }
 
         input[type="file"] {
             display: none;
         }
 
-        .upload-btn {
-            background: #10B981;
-            display: block;
-            padding: 14px;
-            color: white;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        #result {
-            margin-top: 20px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #111827;
-            word-break: break-word;
-        }
-
         img {
             max-width: 100%;
-            height: auto;
-            border-radius: 10px;
-            margin-top: 15px;
+            max-height: 250px;
+            border-radius: 12px;
+            margin-top: 16px;
             display: none;
             object-fit: cover;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 420px;
+            padding: 20px 20px 32px 20px;
+            border-radius: 24px 24px 0 0;
+            text-align: center;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        .sheet-btn {
+            width: 100%;
+            padding: 14px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: #1e293b;
+            cursor: pointer;
+        }
+
+        .sheet-btn:active {
+            background: #e2e8f0;
+        }
+
+        .sheet-btn.cancel {
+            background: #fef2f2;
+            color: #ef4444;
+            margin-top: 10px;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -95,15 +157,31 @@
 
     <div class="card">
         <h2>📸 สแกนมิเตอร์</h2>
-        <!-- เพิ่ม capture="environment" เพื่อเรียกใช้งานกล้องหลังบนมือถือโดยตรง -->
-        <label for="meterImg" class="upload-btn">📷 ถ่ายรูป / เลือกรูปมิเตอร์</label>
-        <input type="file" id="meterImg" accept="image/*" onchange="previewImage(event)">
+
+        <button type="button" class="primary-btn btn-upload" onclick="openSheet()">
+            <span>📷</span> เลือก/ถ่ายรูปมิเตอร์
+        </button>
+
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(event)">
+        <input type="file" id="galleryInput" accept="image/*" onchange="previewImage(event)">
 
         <img id="preview" alt="Meter Preview">
-        <button onclick="processAndUpload()">อ่านค่าและบันทึกข้อมูล</button>
 
-        <div id="status" style="margin-top: 15px; color: #4B5563; font-size: 15px;"></div>
-        <div id="result"></div>
+        <button class="primary-btn btn-process" onclick="processAndUpload()">
+            อ่านค่าและบันทึกข้อมูล
+        </button>
+
+        <div id="status" style="margin-top: 16px; color: #64748b; font-size: 14px;"></div>
+        <div id="result" style="margin-top: 16px; font-size: 18px; font-weight: 700; color: #0f172a;"></div>
+    </div>
+
+    <div id="actionSheet" class="modal-overlay" onclick="closeSheet(event)">
+        <div class="modal-content">
+            <div class="modal-title">เลือกช่องทางอัปโหลดรูปภาพ</div>
+            <button class="sheet-btn" onclick="triggerInput('cameraInput')">📷 ถ่ายรูปด้วยกล้อง</button>
+            <button class="sheet-btn" onclick="triggerInput('galleryInput')">🖼️ เลือกจากคลังรูปภาพ</button>
+            <button class="sheet-btn cancel" onclick="closeSheet()">ยกเลิก</button>
+        </div>
     </div>
 
     <script>
@@ -111,29 +189,45 @@
         const SUPABASE_KEY = 'sb_publishable_h3U6f5PNBFwp-r7PnYWNtQ_IyQ635yI';
         const part1 = 'AQ.Ab8RN6JI-q10Gl_ouJnzMMXan';
         const part2 = 'TWwERdxxW8Kni4Atdtm6vpVvw';
-        const GEMINI_API_KEY = part1+part2;
+        const GEMINI_API_KEY = part1 + part2;
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let selectedFile = null;
+
+        function openSheet() {
+            document.getElementById('actionSheet').style.display = 'flex';
+        }
+
+        function closeSheet(e) {
+            if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('cancel')) {
+                document.getElementById('actionSheet').style.display = 'none';
+            }
+        }
+
+        function triggerInput(inputId) {
+            closeSheet();
+            document.getElementById(inputId).click();
+        }
 
         function previewImage(event) {
             const img = document.getElementById('preview');
             if (event.target.files && event.target.files[0]) {
-                img.src = URL.createObjectURL(event.target.files[0]);
+                selectedFile = event.target.files[0];
+                img.src = URL.createObjectURL(selectedFile);
                 img.style.display = 'block';
             }
         }
 
         async function processAndUpload() {
-            const fileInput = document.getElementById('meterImg');
             const statusDiv = document.getElementById('status');
             const resultDiv = document.getElementById('result');
 
-            if (!fileInput.files[0]) {
-                alert('กรุณาเลือกหรือถ่ายรูปก่อนครับ');
+            if (!selectedFile) {
+                alert('กรุณาเลือกหรือถ่ายรูป');
                 return;
             }
 
-            const file = fileInput.files[0];
+            const file = selectedFile;
             statusDiv.innerText = '⏳ กำลังให้อ่านตัวเลขมิเตอร์...';
             resultDiv.innerText = '';
 
@@ -158,13 +252,8 @@
 
                     const geminiData = await geminiResponse.json();
 
-                    if (geminiData.error) {
-                        throw new Error('Gemini API Error: ' + geminiData.error.message);
-                    }
-
-                    if (!geminiData.candidates || !geminiData.candidates[0]) {
-                        throw new Error('ไม่สามารถอ่านตัวเลขจากภาพนี้ได้ กรุณาลองใหม่อีกครั้ง');
-                    }
+                    if (geminiData.error) throw new Error('Gemini API Error: ' + geminiData.error.message);
+                    if (!geminiData.candidates || !geminiData.candidates[0]) throw new Error('ไม่สามารถอ่านตัวเลขจากภาพนี้ได้');
 
                     const meterNum = geminiData.candidates[0].content.parts[0].text.trim();
 
@@ -173,7 +262,7 @@
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}.${fileExt}`;
 
-                    const { data: storageData, error: storageError } = await supabaseClient.storage
+                    const { error: storageError } = await supabaseClient.storage
                         .from('meter-images')
                         .upload(fileName, file);
 
