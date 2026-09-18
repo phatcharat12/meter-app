@@ -31,6 +31,31 @@
             width: 100%;
             max-width: 380px;
             text-align: center;
+            position: relative;
+            /* สำหรับจัดตำแหน่งปุ่มไอคอนมุมขวาบน */
+        }
+
+        /* ปุ่มไอคอนไป Dashboard มุมขวาบน */
+        .icon-dashboard-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            color: #6366f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .icon-dashboard-btn:active {
+            transform: scale(0.92);
+            background: #e2e8f0;
         }
 
         h2 {
@@ -38,8 +63,12 @@
             color: #0f172a;
             font-size: 22px;
             font-weight: 700;
+            padding-right: 30px;
+            /* เว้นระยะไม่ให้เกยกับปุ่มไอคอน */
+            text-align: left;
         }
 
+        /* ปุ่มหลักทรงสวย */
         .primary-btn {
             background: #4f46e5;
             color: white;
@@ -86,6 +115,7 @@
             border: 1px solid #e2e8f0;
         }
 
+        /* Modal Bottom Sheet */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -156,11 +186,17 @@
 <body>
 
     <div class="card">
+        <a href="dashboard.html" class="icon-dashboard-btn" title="ดูประวัติข้อมูล">
+            📊
+        </a>
+
         <h2>📸 สแกนมิเตอร์</h2>
 
+
         <button type="button" class="primary-btn btn-upload" onclick="openSheet()">
-            <span>📷</span> เลือก/ถ่ายรูปมิเตอร์
+            เลือก/ถ่ายรูปมิเตอร์
         </button>
+
 
         <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(event)">
         <input type="file" id="galleryInput" accept="image/*" onchange="previewImage(event)">
@@ -175,6 +211,7 @@
         <div id="result" style="margin-top: 16px; font-size: 18px; font-weight: 700; color: #0f172a;"></div>
     </div>
 
+    <!-- Action Sheet Pop-up -->
     <div id="actionSheet" class="modal-overlay" onclick="closeSheet(event)">
         <div class="modal-content">
             <div class="modal-title">เลือกช่องทางอัปโหลดรูปภาพ</div>
@@ -223,7 +260,7 @@
             const resultDiv = document.getElementById('result');
 
             if (!selectedFile) {
-                alert('กรุณาเลือกหรือถ่ายรูป');
+                alert('กรุณาเลือกหรือถ่ายรูปก่อนครับ');
                 return;
             }
 
