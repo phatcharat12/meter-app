@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Reads Dashboard - ประวัติการอ่านค่ามิเตอร์</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Sarabun -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-sm transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-gauge-high text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg sm:text-xl text-slate-900 leading-tight">Meter Dashboard</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">ระบบบันทึกและตรวจสอบประวัติมิเตอร์</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="fetchMeterReads()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 active:scale-95 transition shadow-sm">
+                    <i id="refreshIcon" class="fa-solid fa-rotate text-indigo-600"></i>
+                    <span class="hidden sm:inline">รีเฟรช</span>
+                </button>
+                <a href="index.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 active:scale-95 transition shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>หน้าสแกน</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Total Records Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">รายการทั้งหมด</p>
+                    <h3 id="statTotal" class="text-2xl font-bold text-slate-900 mt-0.5">-</h3>
+                </div>
+            </div>
+
+            <!-- Latest Reading Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">ค่ามิเตอร์ล่าสุด</p>
+                    <h3 id="statLatest" class="text-2xl font-bold text-slate-900 mt-0.5 truncate max-w-[180px]">-</h3>
+                </div>
+            </div>
+
+            <!-- Last Updated Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-regular fa-clock"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">บันทึกล่าสุดเมื่อ</p>
+                    <h3 id="statTime" class="text-sm font-bold text-slate-900 mt-1 truncate">-</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls & Filters Section -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+            <!-- Search Input -->
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" oninput="filterData()" placeholder="ค้นหาเลขมิเตอร์ หรือ ID..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+            </div>
+
+            <!-- Filters -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <select id="statusFilter" onchange="filterData()" class="w-full md:w-auto px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    <option value="ALL">สถานะทั้งหมด</option>
+                    <option value="SUCCESS">อ่านสำเร็จ</option>
+                    <option value="FAILED">ไม่พบตัวเลข</option>
+                </select>
+
+                <select id="sortOrder" onchange="filterData()" class="w-full md:w-auto px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    <option value="DESC">ใหม่สุดไปเก่าสุด</option>
+                    <option value="ASC">เก่าสุดไปใหม่สุด</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <!-- Loading Skeleton -->
+            <div id="loadingState" class="p-8 space-y-4">
+                <div class="h-6 bg-slate-100 rounded-lg w-1/4 animate-pulse"></div>
+                <div class="space-y-3">
+                    <div class="h-16 bg-slate-50 rounded-xl animate-pulse"></div>
+                    <div class="h-16 bg-slate-50 rounded-xl animate-pulse"></div>
+                    <div class="h-16 bg-slate-50 rounded-xl animate-pulse"></div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden py-16 px-4 text-center">
+                <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">ไม่พบข้อมูล</h3>
+                <p class="text-sm text-slate-500 mt-1">ยังไม่มีการบันทึกข้อมูล หรือไม่พบรายการที่ค้นหา</p>
+            </div>
+
+            <!-- Responsive Table View (Desktop) -->
+            <div id="tableContainer" class="hidden overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500 tracking-wider">
+                            <th class="py-3.5 px-6">ID</th>
+                            <th class="py-3.5 px-6">รูปภาพมิเตอร์</th>
+                            <th class="py-3.5 px-6">เลขมิเตอร์ที่อ่านได้</th>
+                            <th class="py-3.5 px-6">วันที่ & เวลา (ไทย)</th>
+                            <th class="py-3.5 px-6">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Dynamic Rows Inject Here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 transition-all" onclick="closeImageModal()">
+        <div class="relative bg-white rounded-2xl max-w-2xl w-full p-4 overflow-hidden shadow-2xl space-y-3" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-sm sm:text-base">รูปภาพมิเตอร์ HD</h3>
+                <button onclick="closeImageModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[70vh]">
+                <img id="modalImage" src="" alt="Meter HD Preview" class="max-h-[70vh] w-auto object-contain">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configurations
+        const SUPABASE_URL = 'https://ssotifsagmrvhqzlesii.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_h3U6f5PNBFwp-r7PnYWNtQ_IyQ635yI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let globalMeterReads = [];
+
+        // Format ISO Date String into Thai Local Time (Asia/Bangkok)
+        function formatThaiDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return new Intl.DateTimeFormat('th-TH', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Bangkok'
+            }).format(date);
+        }
+
+        // Fetch Meter Readings from Supabase
+        async function fetchMeterReads() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('fa-spin');
+            
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('meter_reads')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                globalMeterReads = data || [];
+                updateDashboardKPIs(globalMeterReads);
+                filterData();
+
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                alert('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message);
+            } finally {
+                refreshIcon.classList.remove('fa-spin');
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+        }
+
+        // Update Dashboard Top Cards
+        function updateDashboardKPIs(data) {
+            document.getElementById('statTotal').innerText = data.length.toLocaleString('th-TH');
+            
+            if (data.length > 0) {
+                const latest = data[0];
+                document.getElementById('statLatest').innerText = latest.meter_number || 'ไม่พบตัวเลข';
+                document.getElementById('statTime').innerText = formatThaiDateTime(latest.created_at);
+            } else {
+                document.getElementById('statLatest').innerText = '-';
+                document.getElementById('statTime').innerText = '-';
+            }
+        }
+
+        // Filter & Sort Logic
+        function filterData() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortOrder = document.getElementById('sortOrder').value;
+
+            let filtered = globalMeterReads.filter(item => {
+                const meterNo = (item.meter_number || '').toString().toLowerCase();
+                const idStr = (item.id || '').toString();
+                const matchesSearch = meterNo.includes(searchValue) || idStr.includes(searchValue);
+                
+                let matchesStatus = true;
+                if (statusFilter === 'SUCCESS') {
+                    matchesStatus = item.meter_number && item.meter_number !== 'ไม่พบตัวเลข';
+                } else if (statusFilter === 'FAILED') {
+                    matchesStatus = !item.meter_number || item.meter_number === 'ไม่พบตัวเลข';
+                }
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Sort logic
+            filtered.sort((a, b) => {
+                const dateA = new Date(a.created_at);
+                const dateB = new Date(b.created_at);
+                return sortOrder === 'DESC' ? dateB - dateA : dateA - dateB;
+            });
+
+            renderTable(filtered);
+        }
+
+        // Render Data into Table
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            const tableContainer = document.getElementById('tableContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            tableBody.innerHTML = '';
+
+            if (data.length === 0) {
+                tableContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/60 transition';
+
+                const isSuccess = item.meter_number && item.meter_number !== 'ไม่พบตัวเลข';
+                const statusBadge = isSuccess
+                    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> อ่านสำเร็จ
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> ไม่พบตัวเลข
+                       </span>`;
+
+                const fallbackImg = `https://placehold.co/100x100/e2e8f0/64748b?text=No+Image`;
+                const imgUrl = item.image_url || fallbackImg;
+
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-500">#${item.id}</td>
+                    <td class="py-4 px-6">
+                        <div class="relative group w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer shadow-sm hover:ring-2 hover:ring-indigo-500 transition" onclick="openImageModal('${imgUrl}', '#${item.id}')">
+                            <img src="${imgUrl}" alt="Meter ${item.id}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='${fallbackImg}'">
+                            <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs transition">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="font-mono text-base font-bold ${isSuccess ? 'text-indigo-600' : 'text-slate-400'} bg-slate-100/80 px-3 py-1 rounded-lg border border-slate-200/50">
+                            ${item.meter_number || 'ไม่ระบุ'}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-slate-600 font-medium">
+                        ${formatThaiDateTime(item.created_at)}
+                    </td>
+                    <td class="py-4 px-6">
+                        ${statusBadge}
+                    </td>
+                `;
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Modal Controls
+        function openImageModal(url, idText) {
+            document.getElementById('modalImage').src = url;
+            document.getElementById('modalTitle').innerText = `รูปภาพมิเตอร์รายการ ${idText}`;
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        // Initial Load
+        window.onload = () => {
+            fetchMeterReads();
+        };
+    </script>
+</body>
+</html>
